@@ -1,6 +1,6 @@
 # py-maths
 Some operations with functions and equations
 
-Only 'Basic' derivates supported.
+Only 'Basic' derivatives supported.
 
 Version 0.0.1
