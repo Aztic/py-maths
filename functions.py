@@ -1,8 +1,6 @@
 import os
 import re
 
-#ln((8x+3)) + (e^2x+4)
-#f = 'ln((8x+3)*(2x+3)) + (e^(2x+4))'
 
 class Function:
 	def __init__(self, function=None):
