@@ -1,11 +1,10 @@
 import os
 import re
 
-
 class Function:
 	def __init__(self, function=None):
 		if function is None:
-			function = 0
+			function = '0'
 		self.signs = ['+','-','*','/']
 		self.functions = ['^','ln','sin','cos','tan','arcsin','arccos','arctan','sec','cosec','e']
 		self.inverses = {'ln':'e', 'sin': 'arcsin','cos':'arccos','tan':'arctan','e':'ln'}
@@ -16,14 +15,16 @@ class Function:
 		self.der = self.derivate(function)
 
 	def derivate(self,function):
+		function = function.replace(' ','')
 		if function == 'x':
 			return '1'
 		repls = ['A','B']
 		repls_2 = ['Ap','Bp']
+		clean = ['*1','+0']
 		ext = self.external_f(function)
 		der = ''
-		if ext is None:
-			return ''
+		if not ext:
+			return '0'
 		else:
 			f = list(ext)[0]
 			der = self.derivates[f]
@@ -31,16 +32,19 @@ class Function:
 				for i, value in enumerate(repls):
 					der = re.sub('\s{}\s'.format(value),ext[f][i],der)
 				for i, value in enumerate(repls_2):
-					der = re.sub(r'[{}]'.format(value),self.derivate(ext[f][i]),der)
-				if der == self.derivates[f]:
-					der = '0'
+					if value in repls_2:
+						der = re.sub('{}'.format(value),self.derivate(ext[f][i]),der)
+				#if der == self.derivates[f]:
+					#der = '0'
 			else:
 				der = re.sub('A',ext[f][0],self.derivates[f])
 				temp = self.derivate(ext[f][0])
 				if temp:
 					der += ' * ' + temp
 		der = der.replace(' ','')
-		der = re.sub('\*1','',der)
+		for i in clean:
+			der = re.sub('\{}'.format(i),'',der)
+		der = self._clean_zeroes(der)
 		return der
 
 	#Returns the external function or operator and the implicated elements as a dictionary
@@ -48,7 +52,7 @@ class Function:
 	#A exception occurs with '^'. ['^':[(base),(exponent)]]
 
 	def external_f(self,function):
-		if not function:
+		if not function or function.isdigit():
 			return 0
 		external = {}
 		returned = {}
@@ -181,3 +185,23 @@ class Function:
 		for i, value in enumerate(function):
 			if value.isdigit():
 				return [i,value]
+
+	def _clean_zeroes(self,function):
+		zeroes = ['*0','0*']
+		limiters = self._positions(function,'+') + self._positions(function,'-')
+		limiters.sort()
+		for zero in zeroes:
+			all_z = self._positions(function,zero)
+			for pos in all_z:
+				if pos < limiters[0]:
+					function = function.replace(function[0:limiters[0]+1], '')
+				else:
+					for i, value in enumerate(limiters):
+						if pos > limiters[i+1]:
+							prev = value
+							next_s = limiters[i+1]
+							break
+					function = function.replace(function[prev+1:next_s+1], '')	
+
+		return function
+
