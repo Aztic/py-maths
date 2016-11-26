@@ -6,13 +6,19 @@ class Function:
 		if function is None:
 			function = '0'
 		self.signs = ['+','-','*','/']
-		self.functions = ['^','ln','sin','cos','tan','arcsin','arccos','arctan','sec','cosec','e']
+		self.functions = ['^','ln','sin','cos','tan','arcsin','arccos','arctan','sec','cosec']
 		self.inverses = {'ln':'e', 'sin': 'arcsin','cos':'arccos','tan':'arctan','e':'ln'}
 		self.derivates = {'+': 'Ap + Bp', '-':'Ap - Bp', '*': 'Ap * B + A * Bp', '/':'(Ap * B - A * Bp)/(B^2)',
-						'ln':'1/(A)', 'sin':'cos(A)', 'cos':'-sin(A)','tan':'sec(A)^2', 'x':'1'}
+						'ln':'1/(A)', 'sin':'cos(A)', 'cos':'-sin(A)','tan':'sec(A)^2', 'x':'1','^':'',}
 		self.function = str(function)
 		self.ext_f = self.external_f(function)
 		self.der = self.derivate(function)
+
+	def __repr__(self):
+		return 'function: \'{}\''.format(self.function)
+
+	def __add__(self,other):
+		return self.function + '+' + other.function
 
 	def derivate(self,function):
 		function = function.replace(' ','')
@@ -36,14 +42,20 @@ class Function:
 						der = re.sub('{}'.format(value),self.derivate(ext[f][i]),der)
 				#if der == self.derivates[f]:
 					#der = '0'
+			elif f == '^':
+				if ext[f][0] == 'e':
+					der = self.derivate(ext[f][1]) + '*' + function
+				else:
+					der = ext[f][1] + '*' + ext[f][0] + '^' + ext[f][1] + '-1' + '*' + self.derivate(ext[f][0])
 			else:
 				der = re.sub('A',ext[f][0],self.derivates[f])
 				temp = self.derivate(ext[f][0])
 				if temp:
-					der += ' * ' + temp
+					der = temp + ' * ' + der
 		der = der.replace(' ','')
 		for i in clean:
 			der = re.sub('\{}'.format(i),'',der)
+		der = der.replace('1*','')
 		der = self._clean_zeroes(der)
 		return der
 
@@ -62,11 +74,12 @@ class Function:
 		if opened and closed:
 			returned = self._separate(opened,closed,len(function))
 			for position in returned['allowed']:
+				place = function[position[0]:position[1]+1]
 				#Check signs
 				for sign in self.signs:
-					if sign in function[position[0]:position[1]+1].split():
+					if sign in place.split() or sign in place:
 						the_index = function.index(sign,position[0])
-						external[sign] = [function[1:the_index-1], function[the_index+1:len(function)]]
+						external[sign] = [function[0:the_index], function[the_index+1:len(function)]]
 						return external
 			#Check functions
 			for position in returned['allowed']:
@@ -75,9 +88,15 @@ class Function:
 					#print(internal)
 					if f == '^' and f in internal:
 						the_index = function.index(f)
-						place = self._previous(returned['intervals'],function,the_index)
-						external[f] = [function[place[0]:place[1]+1] ,function[the_index+1]]
-					elif f in internal:
+
+						try:
+							place = self._previous(returned['intervals'],function,the_index)
+							external[f]= [function[place[0]+1:place[1]]]
+						except:
+							external[f] = [function[the_index-1]]
+						place = self._next(returned['intervals'],function,the_index)
+						external[f].append(function[place[0]+1:place[1]])
+					elif f in internal and f != '^':
 						the_index = function.index(f)
 						place = self._next(returned['intervals'],function,the_index)
 						external[f] = [function[place[0]+1:place[1]]]
@@ -87,6 +106,11 @@ class Function:
 				if sign in function:
 					place = function.index(sign)
 					external[sign] = [function[0:place], function[place+1:len(function)]]
+					return external
+			for f in self.functions:
+				if f in function:
+					place = function.index(f)
+					external[f] = [function[0:place], function[place+1:len(function)]]
 					return external
 			place = self._the_digit(function)
 			if place:
@@ -150,15 +174,19 @@ class Function:
 		else:
 			start = temp_list[0][1] + 1
 		if temp_list:
-			for i, interval in enumerate(temp_list):
-				if not start:
-					allowed_intervals.append([start,interval[0]-1])
-				else:
-					if i != len(temp_list)-1:
-						allowed_intervals.append([start,temp_list[i+1][0]])
+			if len(temp_list) == 1:
+				allowed_intervals.append([0,temp_list[0][0]-1])
+				allowed_intervals.append([temp_list[0][1]+1,length])
+			else:
+				for i, interval in enumerate(temp_list):
+					if not start:
+						allowed_intervals.append([start,interval[0]-1])
 					else:
-						allowed_intervals.append([start,length])
-				start = interval[1]+1
+						if i != len(temp_list)-1:
+							allowed_intervals.append([start,temp_list[i+1][0]])
+						else:
+							allowed_intervals.append([start,length])
+					start = interval[1]+1
 		returned['allowed'] = allowed_intervals
 		returned['intervals'] = temp_list
 		return returned
