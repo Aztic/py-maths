@@ -20,13 +20,28 @@ class Function:
 	def __add__(self,other):
 		return self.function + '+' + other.function
 
+	def _extract_digits(self,function):
+		f = re.sub('\D','',function)
+		if f:
+			return int(f)
+		else:
+			return False
+
+	def _extract_characters(self,function):
+		f = [b for b in function if not b.isdigit()]
+		if f:
+			f = ''.join(f)
+			return f
+		else:
+			return ''
+
 	def derivate(self,function):
 		function = function.replace(' ','')
 		if function == 'x':
 			return '1'
 		repls = ['A','B']
 		repls_2 = ['Ap','Bp']
-		clean = ['*1','+0']
+		clean = ['*1','+0','0+','^1']
 		ext = self.external_f(function)
 		der = ''
 		if not ext:
@@ -46,7 +61,15 @@ class Function:
 				if ext[f][0] == 'e':
 					der = self.derivate(ext[f][1]) + '*' + function
 				else:
-					der = ext[f][1] + '*' + ext[f][0] + '^' + ext[f][1] + '-1' + '*' + self.derivate(ext[f][0])
+					#try:
+						#der = ext[f][1] + '*' + ext[f][0] + '^' + ext[f][1] + '-1' + '*' + self.derivate(ext[f][0])
+					b = self._extract_digits(ext[f][0])
+					bc= self._extract_characters(ext[f][0])
+					e = self._extract_digits(ext[f][1])
+					ec = self._extract_characters(ext[f][1])
+					der = "{}{}^{}{} * {}".format(b*e,bc,e-1,ec,self.derivate(ext[f][0]))
+					#except:
+						#der = ext[f][1] + '*' + ext[f][0] + '^' + ext[f][1] + '-1' + '*' + self.derivate(ext[f][0])
 			else:
 				der = re.sub('A',ext[f][0],self.derivates[f])
 				temp = self.derivate(ext[f][0])
